@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+data/GSE171406_Human_Nephrectomy/filtered_feature_bc_matrix.h5
+data/GSE171406_Human_Nephrectomy/spatial/aligned_fiducials.jpg
+data/GSE171406_Human_Nephrectomy/spatial/detected_tissue_image.jpg
+data/GSE171406_Human_Nephrectomy/spatial/scalefactors_json.json
+data/GSE171406_Human_Nephrectomy/spatial/tissue_hires_image.png
+data/GSE171406_Human_Nephrectomy/spatial/tissue_lowres_image.png
+data/GSE171406_Human_Nephrectomy/spatial/tissue_positions_list.csv
