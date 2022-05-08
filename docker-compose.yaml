@@ -5,9 +5,10 @@ services:
     image: fpst:latest
     build: .
     volumes:
-      - "./data:/FPST/data"
+      - "./data:/data"
       - "./notebooks:/FPST/notebooks"
       - "./src:/FPST/src"
     ports:
       - "8888:8888"
+      - "5001:5000"
     command: jupyter notebook --no-browser --ip='*' --port=8888 --allow-root --NotebookApp.token='' --NotebookApp.password=''

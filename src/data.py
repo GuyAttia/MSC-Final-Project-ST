@@ -49,9 +49,9 @@ def train_valid_test_split(df):
     """
     df_full_train, df_test = train_test_split(df, test_size=0.10)
     df_train, df_valid = train_test_split(df_full_train, test_size=0.10)
-    print(f'Split to train, valid, full-train and test:\nTrain shape:{df_train.shape}\nValid shape:{df_valid.shape}\nFull train shape:{df_full_train.shape}\nTest shape:{df_test.shape}')
+    print(f'Split to train, valid, full-train and test:\nTrain shape:{df_train.shape}\nValid shape:{df_valid.shape}\nTest shape:{df_test.shape}')
 
-    return df_train, df_valid, df_test, df_full_train
+    return df_train, df_valid, df_test
 
 ### ----------------------------------------------------------------------- MF -------------------------------------------------------------------------------- ###
 
@@ -87,33 +87,31 @@ def dataloaders(dataset_name, device, batch_size: int = 128):
     """
     expressions = get_expressions(dataset_name=dataset_name)
 
-    df_train, df_valid, df_test, df_full_train = train_valid_test_split(df=expressions)
+    df_train, df_valid, df_test = train_valid_test_split(df=expressions)
 
     print('Start creating the DataSets')
     ds_train = ExpressionDataset(df=df_train, device=device)
     ds_valid = ExpressionDataset(df=df_valid, device=device)
     ds_test = ExpressionDataset(df=df_test, device=device)
-    ds_full_train = ExpressionDataset(df=df_full_train, device=device)
 
     print('Start creating the DataLoaders')
     dl_train = DataLoader(dataset=ds_train, batch_size=batch_size, shuffle=True)
     dl_valid = DataLoader(dataset=ds_valid, batch_size=batch_size, shuffle=True)
     dl_test = DataLoader(dataset=ds_test, batch_size=batch_size, shuffle=True)
-    dl_full_train = DataLoader(dataset=ds_full_train, batch_size=batch_size, shuffle=True)
 
     print('Finish loading the data')
-    return dl_train, dl_valid, dl_test, dl_full_train
+    return dl_train, dl_valid, dl_test
 
 
 def get_data(dataset_name, batch_size, device):
     """
     Get the train, validation, test, and full train data loaders for the relevant dataset
     """
-    dl_train, dl_valid, dl_test, dl_full_train = dataloaders(dataset_name=dataset_name, batch_size=batch_size, device=device)
-    return dl_train, dl_valid, dl_test, dl_full_train
+    dl_train, dl_valid, dl_test = dataloaders(dataset_name=dataset_name, batch_size=batch_size, device=device)
+    return dl_train, dl_valid, dl_test
 
 
 # For testing only
 if __name__ == '__main__':
     dataset_name = 'V1_Human_Lymph_Node'
-    dl_train, dl_valid, dl_test, dl_full_train = get_data(dataset_name=dataset_name, batch_size=128, device='cpu')
+    dl_train, dl_valid, dl_test = get_data(dataset_name=dataset_name, batch_size=128, device='cpu')
