@@ -136,7 +136,7 @@ def trainer(model, optimizer, max_epochs, early_stopping, dl_train, dl_test, dev
     tb_logger.close()   # Close logger
     # Return the best validation score
     best_val_score = -handler.best_score
-    return best_val_score
+    return model, best_val_score
 
 
 # Only for testing
@@ -159,4 +159,4 @@ if __name__ == '__main__':
     dl_train, _, dl_test = get_data(dataset_name=dataset_name, batch_size=best_params['batch_size'], device=device)  # Get data
     model = get_model(model_name, best_params, dl_train)  # Build model
     optimizer = getattr(optim, best_params['optimizer'])(model.parameters(), lr=best_params['learning_rate'])  # Instantiate optimizer
-    test_loss = trainer(model_name, model, optimizer, max_epochs, dl_train, dl_test, device, dataset_name, model_name=model_name)
+    test_loss = trainer(model, optimizer, max_epochs, dl_train, dl_test, device, dataset_name, model_name=model_name)
