@@ -6,15 +6,17 @@ import torch.optim as optim
 import trainer as trainer
 from data import get_data
 from models import get_model
+from loss import *
 
 
-def train(model_name, model, optimizer, epochs, dl_train, dl_test, device, dataset_name):
+def train(model_name, model, optimizer, criterion, epochs, dl_train, dl_test, device, dataset_name):
     """
     Execute the proper trainer with the right model, optimizer and relevant data loaders.
     """
     loss = trainer.trainer(
         model=model, 
-        optimizer=optimizer, 
+        optimizer=optimizer,
+        criterion=criterion, 
         max_epochs=epochs, 
         early_stopping=3,
         dl_train=dl_train, 
@@ -75,7 +77,9 @@ def tune_params(model_name, dataset_name, n_trials, max_epochs, device):
         )
         model = get_model(model_name, params, dl_train)  # Build model
         optimizer = getattr(optim, params['optimizer'])(model.parameters(), lr=params['learning_rate'])  # Instantiate optimizer
-        valid_loss, _ = train(model_name, model, optimizer, max_epochs, dl_train, dl_valid, device, dataset_name)  # Train the model and calc the validation loss
+        criterion = NON_ZERO_RMSELoss()
+        # criterion = RMSELoss()
+        valid_loss, _ = train(model_name, model, optimizer, criterion, max_epochs, dl_train, dl_valid, device, dataset_name)  # Train the model and calc the validation loss
 
         return valid_loss
 

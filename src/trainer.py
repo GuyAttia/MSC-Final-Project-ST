@@ -11,12 +11,11 @@ from loss import *
 # We used the Ignite package for smarter building of our trainers.
 # This package provide built-in loggers and handlers for different actions.
 
-def trainer(model, optimizer, max_epochs, early_stopping, dl_train, dl_test, device, dataset_name, model_name):
+def trainer(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_test, device, dataset_name, model_name):
     """
     Build a trainer for a model
     """
     model = model.to(device)
-    criterion = RMSELoss()
 
     def train_step(engine, batch):
         """
@@ -159,4 +158,6 @@ if __name__ == '__main__':
     dl_train, _, dl_test = get_data(dataset_name=dataset_name, batch_size=best_params['batch_size'], device=device)  # Get data
     model = get_model(model_name, best_params, dl_train)  # Build model
     optimizer = getattr(optim, best_params['optimizer'])(model.parameters(), lr=best_params['learning_rate'])  # Instantiate optimizer
-    test_loss = trainer(model, optimizer, max_epochs, dl_train, dl_test, device, dataset_name, model_name=model_name)
+    criterion = NON_ZERO_RMSELoss()
+    # criterion = RMSELoss()
+    test_loss = trainer(model, optimizer, criterion, max_epochs, dl_train, dl_test, device, dataset_name, model_name=model_name)
