@@ -10,7 +10,6 @@ services:
       - "./src:/FPST/src"
     ports:
       - "8888:8888"
-      - "5001:5000"
     command: jupyter notebook --no-browser --ip='*' --port=8888 --allow-root --NotebookApp.token='' --NotebookApp.password=''
     deploy:
       resources:
@@ -19,3 +18,10 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+  log-board:
+    image: volnet/tensorflow-tensorboard
+    volumes:
+      - "./notebooks/logs:/logs"
+    ports:
+      - "6006:6006"
+    

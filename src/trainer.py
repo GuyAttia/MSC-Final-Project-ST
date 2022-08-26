@@ -112,7 +112,7 @@ def trainer(model, optimizer, criterion, max_epochs, early_stopping, dl_train, d
 
     # Tensorboard logger - log the training and evaluation losses as function of the iterations & epochs
     tb_logger = TensorboardLogger(
-        log_dir=path.join('tb-logger', dataset_name, model_name))
+        log_dir=path.join('logs', dataset_name, model_name))
     tb_logger.attach_output_handler(
         trainer,
         event_name=Events.ITERATION_COMPLETED(every=100),
