@@ -12,3 +12,10 @@ services:
       - "8888:8888"
       - "5001:5000"
     command: jupyter notebook --no-browser --ip='*' --port=8888 --allow-root --NotebookApp.token='' --NotebookApp.password=''
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
