@@ -1,3 +1,4 @@
+import pandas as pd
 import torch
 
 from loss import *
@@ -12,6 +13,8 @@ def tester(model, dl_test, device):
     model = model.to(device)
     model.eval()
 
+    all_gens, all_spots, y_list, y_pred_list = [], [], [], []
+
     with torch.no_grad():
         total_loss = 0
         for batch in dl_test:
@@ -21,9 +24,15 @@ def tester(model, dl_test, device):
             y.to('cpu')
             y_pred = model(gens, spots).to('cpu')
             total_loss += loss_fn(y_pred, y)
+
+            all_gens.extend(gens.tolist())
+            all_spots.extend(spots.tolist())
+            y_list.extend(y.tolist())
+            y_pred_list.extend(y_pred.tolist())
             
     loss = total_loss / test_samples
-    return loss
+    df_test_preds = pd.DataFrame({'gene': all_gens, 'spot': all_spots, 'y': y_list, 'y_pred': y_pred_list})
+    return loss, df_test_preds
 
 
 # Only for testing
