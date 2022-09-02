@@ -1,3 +1,10 @@
+# Specific for the project
+.devcontainer
+.idea
+data/
+notebooks/checkpoints/
+notebooks/tb-logger/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -134,3 +141,7 @@ data/GSE171406_Human_Nephrectomy/spatial/scalefactors_json.json
 data/GSE171406_Human_Nephrectomy/spatial/tissue_hires_image.png
 data/GSE171406_Human_Nephrectomy/spatial/tissue_lowres_image.png
 data/GSE171406_Human_Nephrectomy/spatial/tissue_positions_list.csv
+
+.idea/*
+.DS_Store
+.Trash-0

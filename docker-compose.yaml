@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  st:
+    image: fpst:latest
+    build: .
+    volumes:
+      - "./data:/data"
+      - "./notebooks:/FPST/notebooks"
+      - "./src:/FPST/src"
+    ports:
+      - "8888:8888"
+    command: jupyter notebook --no-browser --ip='*' --port=8888 --allow-root --NotebookApp.token='' --NotebookApp.password=''
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+  log-board:
+    image: volnet/tensorflow-tensorboard
+    volumes:
+      - "./notebooks/logs:/logs"
+    ports:
+      - "6006:6006"
+    

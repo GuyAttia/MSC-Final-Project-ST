@@ -1,0 +1,10 @@
+# Ignore the git and cache folders
+.git
+.cache
+
+# Data directories
+data
+Dummy Data
+
+# Jupyter notebooks
+notebooks/*.ipynb
