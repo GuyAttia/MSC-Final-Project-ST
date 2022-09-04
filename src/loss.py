@@ -62,7 +62,7 @@ class NON_ZERO_RMSELoss_Spatial(nn.Module):
         loss = torch.sqrt(self.mse(yhat_non_zeros, y_non_zeros) + self.eps)
 
         # Spatial loss
-        df = pd.DataFrame({'gene': genes, 'spot': spots, 'yhat': yhat.detach()})
+        df = pd.DataFrame({'gene': genes.cpu(), 'spot': spots.cpu(), 'yhat': yhat.detach()})
 
         first_degree_loss = 0
         second_degree_loss = 0
@@ -80,7 +80,6 @@ class NON_ZERO_RMSELoss_Spatial(nn.Module):
                 if len(neighbors_expression) > 0:
                     part_loss = np.sqrt(np.mean(np.square(neighbors_expression - yhat_)))
                     first_degree_loss += part_loss
-                    print(1)
 
                 # Second degree loss
                 mask_neighbors = df['spot'].isin(second_degree_neighbors)
@@ -88,7 +87,6 @@ class NON_ZERO_RMSELoss_Spatial(nn.Module):
                 if len(neighbors_expression) > 0:
                     part_loss = np.sqrt(np.mean(np.square(neighbors_expression - yhat_)))
                     first_degree_loss += part_loss
-                    print(2)
 
 
         loss = loss + (self.alpha * first_degree_loss) + (self.beta * second_degree_loss)

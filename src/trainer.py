@@ -10,19 +10,13 @@ from loss import *
 
 
 import torch.optim as optim
-from data import get_data
 from models import get_model
 import numpy as np
 import pandas as pd
-from os import path, listdir
-from copy import deepcopy
 import stlearn as st
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import torch
-import matplotlib.pyplot as plt
-import cv2
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OrdinalEncoder
 from torch import tensor
@@ -30,7 +24,6 @@ from torch.utils.data import DataLoader, Dataset
 import torch.optim as optim
 from scanpy_stlearn_loaders import StlearnLoader
 import trainer as trainer
-from data import get_data
 
 # We used the Ignite package for smarter building of our trainers.
 # This package provide built-in loggers and handlers for different actions.
@@ -248,7 +241,7 @@ if __name__ == '__main__':
     # dl_train, _, dl_test = get_data(dataset_name=dataset_name, batch_size=best_params['batch_size'], device=device)  # Get data
     model = get_model(model_name, best_params, dl_train)  # Build model
     optimizer = getattr(optim, best_params['optimizer'])(model.parameters(), lr=best_params['learning_rate'])  # Instantiate optimizer
-    df_spots_neighbors = pd.read_csv(path.join('/', 'FPST', 'src', 'spots_neighbors.csv'))
+    df_spots_neighbors = pd.read_csv(path.join('src', 'spots_neighbors.csv'))
     criterion = NON_ZERO_RMSELoss_Spatial(df_spots_neighbors=df_spots_neighbors, alpha=0.1, beta=0.1)
     # criterion = NON_ZERO_RMSELoss()
     # criterion = RMSELoss()
