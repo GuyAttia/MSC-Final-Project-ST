@@ -46,7 +46,7 @@ def trainer(model, optimizer, criterion, max_epochs, early_stopping, dl_train, d
 
         model.train()
         y_pred = model(gens, spots).to('cpu')
-        loss = criterion(y_pred, y, spots, gens)
+        loss = criterion(y_pred, y)
 
         # Backpropagation
         optimizer.zero_grad()
@@ -158,32 +158,6 @@ def trainer(model, optimizer, criterion, max_epochs, early_stopping, dl_train, d
     return model, best_val_score
 
 
-
-class ExpressionDataset(Dataset):
-    """
-    Generate expression dataset to use in the our models, where each sample should be a tuple of (gene, spot, expression)
-    """
-
-    def __init__(self, df, device):
-        self.num_samples = len(df)
-        self.genes = tensor(df['gene'].values).to(device)
-        self.spots = tensor(df['spot'].values).to(device)
-        self.labels = tensor(df['expression'].values)
-        self.num_genes = df['gene'].max()
-        self.num_spots = df['spot'].max()
-
-    def __getitem__(self, index):
-        gene = self.genes[index]
-        spot = self.spots[index]
-        label = self.labels[index].item()
-        return gene, spot, label
-
-    def __len__(self):
-        return self.num_samples
-
-    def get_all_data(self):
-        return self.genes, self.spots, self.labels
-        
 # Only for testing
 if __name__ == '__main__':
 
@@ -198,52 +172,11 @@ if __name__ == '__main__':
         'latent_dim': 40,
         'batch_size': 128
     }
-
-    obj = StlearnLoader().load_local_visum(path=path.join('/', 'data', dataset_name), count_file='filtered_feature_bc_matrix.h5')
-    obj.layers["raw_count"] = obj.X
-    x = obj.X.toarray()
-    n_spots, n_genes = x.shape
-
-    # Keep genes with at least 15% non zero spots
-    min_cells = int(n_spots * 0.985)
-    st.pp.filter_genes(obj, min_cells=min_cells)
-    x = obj.X.toarray()
-    n_spots, n_genes = x.shape
-
-    obj.raw = obj
-    x = np.log(x+1)
-    
-    spots_values = obj.obs.index.values
-    genes_values = obj.var.index.values
-    df_expressions_matrix = pd.DataFrame(x, columns=genes_values, index=spots_values)
-    df_expressions = df_expressions_matrix.stack().reset_index()
-    df_expressions.columns = ['spot', 'gene', 'expression']
-
-    # Ordinal encoding the genes and spots for supported type
-    oe_genes = OrdinalEncoder()
-    df_expressions[['gene']] = oe_genes.fit_transform(df_expressions[['gene']].values)
-    oe_spots = OrdinalEncoder()
-    df_expressions[['spot']] = oe_spots.fit_transform(df_expressions[['spot']].values)
-    df_expressions[['spot', 'gene']] = df_expressions[['spot', 'gene']].astype(int)
-
-    df_train, df_test = train_test_split(df_expressions, test_size=0.10)
-    df_train, df_valid = train_test_split(df_train, test_size=0.10)
-
-    ds_train = ExpressionDataset(df=df_train, device=device)
-    ds_valid = ExpressionDataset(df=df_valid, device=device)
-    ds_test = ExpressionDataset(df=df_test, device=device)
-    
-    batch_size = 128
-    dl_train = DataLoader(dataset=ds_train, batch_size=batch_size, shuffle=True)
-    dl_valid = DataLoader(dataset=ds_valid, batch_size=batch_size, shuffle=True)
-    dl_test = DataLoader(dataset=ds_test, batch_size=batch_size, shuffle=True)
-
-    # dl_train, _, dl_test = get_data(dataset_name=dataset_name, batch_size=best_params['batch_size'], device=device)  # Get data
+    dl_train, _, dl_test = get_data(dataset_name=dataset_name, batch_size=best_params['batch_size'], device=device)  # Get data
     model = get_model(model_name, best_params, dl_train)  # Build model
     optimizer = getattr(optim, best_params['optimizer'])(model.parameters(), lr=best_params['learning_rate'])  # Instantiate optimizer
     df_spots_neighbors = pd.read_csv(path.join('src', 'spots_neighbors.csv'))
-    criterion = NON_ZERO_RMSELoss_Spatial(df_spots_neighbors=df_spots_neighbors, alpha=0.1, beta=0.1)
-    # criterion = NON_ZERO_RMSELoss()
+    criterion = NON_ZERO_RMSELoss()
     # criterion = RMSELoss()
     test_loss = trainer(
                     model=model, 
@@ -252,7 +185,7 @@ if __name__ == '__main__':
                     max_epochs=max_epochs, 
                     early_stopping=early_stopping, 
                     dl_train=dl_train, 
-                    dl_test=dl_valid, 
+                    dl_test=dl_test, 
                     device=device, 
                     dataset_name=dataset_name, 
                     model_name=model_name
