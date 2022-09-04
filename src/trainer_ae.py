@@ -139,7 +139,7 @@ def trainer_ae(model, optimizer, criterion, max_epochs, early_stopping, dl_train
 # Only for testing
 if __name__ == '__main__':
     from src.hyperparams_tuning import *
-    from src.data_ae import *
+    from src.data import *
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dataset_name = 'Visium_Mouse_Olfactory_Bulb'
@@ -152,7 +152,7 @@ if __name__ == '__main__':
         'latent_dim': 40,
         'batch_size': 128
     }
-    dl_train, _, dl_test = dataloaders_ae(
+    dl_train, _, dl_test = get_data(model_name=model_name,
         dataset_name=dataset_name, batch_size=best_params['batch_size'], device=device)
     model = get_model(model_name, best_params, dl_train)  # Build model
     optimizer = getattr(optim, best_params['optimizer'])(
