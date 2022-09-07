@@ -5,7 +5,7 @@ from ignite.metrics import Loss
 from ignite.handlers import ModelCheckpoint, EarlyStopping
 from ignite.contrib.handlers import TensorboardLogger, global_step_from_engine
 
-from src.loss import *
+from loss import *
 
 # We used the Ignite package for smarter building of our trainers.
 # This package provide built-in loggers and handlers for different actions.
@@ -18,7 +18,7 @@ def trainer_ae(model, optimizer, criterion, max_epochs, early_stopping, dl_train
     model = model.to(device)
     # Define the loss function - AutoEnc data loaders are the genes/spots vectors, therefore contains a lot of non-relevant zeros,
     # so we used our custom RMSE which don't take them into account.
-    criterion = NON_ZERO_RMSELoss()
+    # criterion = NON_ZERO_RMSELoss()
 
     def train_step(engine, batch):
         """
@@ -58,13 +58,13 @@ def trainer_ae(model, optimizer, criterion, max_epochs, early_stopping, dl_train
     # Generate training and validation evaluators to print results during running
     val_metrics = {
         "loss": Loss(criterion),
-        'NonZeroRMSE': Loss(NON_ZERO_RMSELoss),
+        # 'NonZeroRMSE': Loss(NON_ZERO_RMSELoss),
     }
 
     # Attach metrics to the evaluators
     val_metrics['loss'].attach(train_evaluator, 'loss')
     val_metrics['loss'].attach(val_evaluator, 'loss')
-    val_metrics['NonZeroRMSE'].attach(val_evaluator, 'NonZeroRMSE')
+    # val_metrics['NonZeroRMSE'].attach(val_evaluator, 'NonZeroRMSE')
 
     # Attach logger to print the training loss after each epoch
     @trainer.on(Events.EPOCH_COMPLETED)
@@ -80,7 +80,7 @@ def trainer_ae(model, optimizer, criterion, max_epochs, early_stopping, dl_train
         val_evaluator.run(dl_test)
         metrics = val_evaluator.state.metrics
         print(
-            f"Validation Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f}|  Avg NonZeroRMSE: {metrics['NonZeroRMSE']:.2f}")
+            f"Validation Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f}")#|  Avg NonZeroRMSE: {metrics['NonZeroRMSE']:.2f}")
 
     # Model Checkpoint
     def score_function(engine):
@@ -133,18 +133,19 @@ def trainer_ae(model, optimizer, criterion, max_epochs, early_stopping, dl_train
     tb_logger.close()   # Close logger
     # Return the best validation score
     best_val_score = -handler.best_score
-    return best_val_score
+    return model, best_val_score
 
 
 # Only for testing
 if __name__ == '__main__':
-    from src.hyperparams_tuning import *
-    from src.data import *
+    from hyperparams_tuning import *
+    from data import *
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dataset_name = 'Visium_Mouse_Olfactory_Bulb'
 
     max_epochs = 2
+    early_stopping = 1
     model_name = 'AE'
     best_params = {
         'learning_rate': 0.001,
@@ -154,8 +155,20 @@ if __name__ == '__main__':
     }
     dl_train, _, dl_test = get_data(model_name=model_name,
         dataset_name=dataset_name, batch_size=best_params['batch_size'], device=device)
+    print('got data')
     model = get_model(model_name, best_params, dl_train)  # Build model
     optimizer = getattr(optim, best_params['optimizer'])(
         model.parameters(), lr=best_params['learning_rate'])  # Instantiate optimizer
-    test_loss = train(model_name, model, optimizer, max_epochs, dl_train,
-                      dl_test, device, dataset_name)
+    criterion = NON_ZERO_RMSELoss()
+    test_loss = trainer_ae(
+        model=model, 
+        optimizer=optimizer, 
+        criterion=criterion,
+        max_epochs=max_epochs, 
+        early_stopping=early_stopping,
+        dl_train=dl_train,
+        dl_test=dl_test, 
+        device=device, 
+        dataset_name=dataset_name,
+        model_name=model_name
+        )

@@ -1,5 +1,4 @@
-# import stlearn as st
-# import scanpy as sc
+from os import path
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -32,7 +31,7 @@ def encode_genes_and_spots(data_obj):
     spots_values = data_obj.obs.index.values
     genes_values = data_obj.var.index.values
     x = data_obj.X.toarray()
-    df_expressions_matrix = pd.DataFrame(x, columns=spots_values, index=genes_values)
+    df_expressions_matrix = pd.DataFrame(x, columns=genes_values, index=spots_values).T
     df_expressions = df_expressions_matrix.stack().reset_index()
     df_expressions.columns = ['gene', 'spot', 'expression']
     
@@ -146,13 +145,13 @@ def create_matrix(expressions, df_train, df_valid, df_test):
     """
     # Pivot the full-data, train, valid and test DataFrames.
     expressions_pivot = expressions.pivot(
-        index='gene_id', columns='spot_id', values='expression').fillna(0)
+        index='gene', columns='spot', values='expression').fillna(0)
     train_pivot = df_train.pivot(
-        index='gene_id', columns='spot_id', values='expression').fillna(0)
+        index='gene', columns='spot', values='expression').fillna(0)
     valid_pivot = df_valid.pivot(
-        index='gene_id', columns='spot_id', values='expression').fillna(0)
+        index='gene', columns='spot', values='expression').fillna(0)
     test_pivot = df_test.pivot(
-        index='gene_id', columns='spot_id', values='expression').fillna(0)
+        index='gene', columns='spot', values='expression').fillna(0)
     del expressions, df_train, df_valid, df_test
 
     # Create empty matrixes in the shape of the full data
@@ -175,8 +174,8 @@ class VectorsDataSet(Dataset):
     Generate vectors dataset to use in the AE model, where each sample should be a gene vector
     """
 
-    def __init__(self, expresions_matrix, device) -> None:
-        self.data = tensor(expresions_matrix.values).float().to(device)
+    def __init__(self, expressions_matrix, device) -> None:
+        self.data = tensor(expressions_matrix.values).float().to(device)
 
     def __getitem__(self, index: int):
         vec = self.data[index]
