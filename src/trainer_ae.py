@@ -58,13 +58,13 @@ def trainer_ae(model, optimizer, criterion, max_epochs, early_stopping, dl_train
     # Generate training and validation evaluators to print results during running
     val_metrics = {
         "loss": Loss(criterion),
-        # 'NonZeroRMSE': Loss(NON_ZERO_RMSELoss),
+        'NonZeroRMSE': Loss(NON_ZERO_RMSELoss),
     }
 
     # Attach metrics to the evaluators
     val_metrics['loss'].attach(train_evaluator, 'loss')
     val_metrics['loss'].attach(val_evaluator, 'loss')
-    # val_metrics['NonZeroRMSE'].attach(val_evaluator, 'NonZeroRMSE')
+    val_metrics['NonZeroRMSE'].attach(val_evaluator, 'NonZeroRMSE')
 
     # Attach logger to print the training loss after each epoch
     @trainer.on(Events.EPOCH_COMPLETED)
@@ -80,7 +80,7 @@ def trainer_ae(model, optimizer, criterion, max_epochs, early_stopping, dl_train
         val_evaluator.run(dl_test)
         metrics = val_evaluator.state.metrics
         print(
-            f"Validation Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f}")#|  Avg NonZeroRMSE: {metrics['NonZeroRMSE']:.2f}")
+            f"Validation Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f} |  Avg NonZeroRMSE: {metrics['NonZeroRMSE']:.2f}")
 
     # Model Checkpoint
     def score_function(engine):
@@ -153,13 +153,13 @@ if __name__ == '__main__':
         'latent_dim': 40,
         'batch_size': 128
     }
-    dl_train, _, dl_test = get_data(model_name=model_name,
+    dl_train, _, dl_test, df_spots_neighbors = get_data(model_name=model_name,
         dataset_name=dataset_name, batch_size=best_params['batch_size'], device=device)
     print('got data')
     model = get_model(model_name, best_params, dl_train)  # Build model
     optimizer = getattr(optim, best_params['optimizer'])(
         model.parameters(), lr=best_params['learning_rate'])  # Instantiate optimizer
-    criterion = NON_ZERO_RMSELoss()
+    criterion = NON_ZERO_RMSELoss_Spatial_AE(df_spots_neighbors=df_spots_neighbors)
     test_loss = trainer_ae(
         model=model, 
         optimizer=optimizer, 

@@ -272,4 +272,4 @@ def get_data(model_name, dataset_name, batch_size, device):
 if __name__ == '__main__':
     dataset_name = 'Visium_Mouse_Olfactory_Bulb'
     model_name = 'AE'
-    dl_train, dl_valid, dl_test = get_data(model_name=model_name, dataset_name=dataset_name, batch_size=128, device='cpu')
+    dl_train, dl_valid, dl_test, df_spots_neighbors = get_data(model_name=model_name, dataset_name=dataset_name, batch_size=128, device='cpu')

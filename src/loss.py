@@ -92,3 +92,42 @@ class NON_ZERO_RMSELoss_Spatial(nn.Module):
         loss = loss + (self.alpha * first_degree_loss) + (self.beta * second_degree_loss)
 
         return loss
+
+
+
+class NON_ZERO_RMSELoss_Spatial_AE(nn.Module):
+    """
+    Implement another RMSE loss that clear the zero indices while adding regularization of the spatial distance
+    """
+
+    def __init__(self, eps=1e-6, df_spots_neighbors=None, alpha=0.1, beta=0.1):
+        super().__init__()
+        self.mse = nn.MSELoss()
+        self.eps = eps  # Add eps to avoid devision by 0
+        self.df_spots_neighbors = df_spots_neighbors
+        self.alpha = alpha
+        self.beta = beta
+
+        # Replace the neighbors closeness to the regularization value
+        self.df_spots_neighbors.replace({1.: self.alpha, 2.: self.beta}, inplace=True)
+
+    def forward(self, yhat, y, **kwargs):
+        # Create mask for all non zero items in the tensor
+        non_zero_mask = torch.nonzero(y, as_tuple=True)
+        y_non_zeros = y[non_zero_mask]  # Keep only non zero in y
+        yhat_non_zeros = yhat[non_zero_mask]    # Keep only non zero in y_hat
+
+        non_zero_error = torch.square(yhat_non_zeros, y_non_zeros)
+        squared_error = torch.square(y - yhat)
+
+        # Spatial loss
+        df_spatial_loss = np.zeros(shape=y.shape)
+        # Iterate over all spots and find their neighbors sum loss
+        for i, spot_neighbors in enumerate(self.df_spots_neighbors.itterrows()):
+            df_spatial_loss[:, i] = squared_error @ spot_neighbors
+
+        spatial_loss_non_zeros = df_spatial_loss[non_zero_mask]    # Keep only non zero in y_hat
+
+        total_squared_error = non_zero_error + spatial_loss_non_zeros
+        loss = torch.sqrt(torch.mean(total_squared_error) + self.eps)
+        return loss
