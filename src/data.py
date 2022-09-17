@@ -42,18 +42,18 @@ def encode_genes_and_spots(data_obj):
     df_expressions[['spot']] = oe_spots.fit_transform(df_expressions[['spot']].values)
 
     df_expressions[['spot', 'gene']] = df_expressions[['spot', 'gene']].astype(int)
-    return df_expressions   
+    return df_expressions, oe_spots
 
 def get_expressions(dataset_name):
     # Load the expressions data into a Pandas DataFrame
     data_obj = load_anndata_object(dataset_name=dataset_name)
     data_obj = run_preprocessing(data_obj=data_obj, apply_log=True)
-    df_expressions = encode_genes_and_spots(data_obj)
+    df_expressions, oe_spots = encode_genes_and_spots(data_obj)
 
     print(f'Data shape: {df_expressions.shape}')
     print(f'Number of genes: {df_expressions["gene"].nunique()}')
     print(f'Number of spots: {df_expressions["spot"].nunique()}')
-    return df_expressions
+    return df_expressions, data_obj, oe_spots
 
 ### ----------------------------------------------------------------------- Split Data -------------------------------------------------------------------------------- ###
 
@@ -83,7 +83,7 @@ def train_valid_test_split_ae(df):
     """
     df_test = df.copy()
     df_train = set_random_zeros(df, random_size=0.1)
-    df_valid = set_random_zeros(df, random_size=0.1)
+    df_valid = set_random_zeros(df_train, random_size=0.1)
 
     return df_train, df_valid, df_test
 
@@ -119,7 +119,7 @@ def dataloaders(dataset_name, device, batch_size: int = 128):
     """
     Generate the DataLoader objects for the models with the defined batch size
     """
-    expressions = get_expressions(dataset_name=dataset_name)
+    expressions, _, _ = get_expressions(dataset_name=dataset_name)
 
     df_train, df_valid, df_test = train_valid_test_split(df=expressions)
 
@@ -192,8 +192,9 @@ def dataloaders_ae(dataset_name, device, batch_size: int = 128):
     """
     Generate the DataLoader objects for AE model with the defined batch size
     """
-    expressions = get_expressions(dataset_name=dataset_name)
-    df_train, df_valid, df_test = train_valid_test_split(df=expressions)
+    expressions, obj, oe_spots = get_expressions(dataset_name=dataset_name)
+    df_spots_neighbors = find_neighbors(obj, oe_spots)
+    df_train, df_valid, df_test = train_valid_test_split_ae(df=expressions)
 
     expressions_train, expressions_valid, expressions_test = create_matrix(
         expressions, df_train, df_valid, df_test)
@@ -206,7 +207,53 @@ def dataloaders_ae(dataset_name, device, batch_size: int = 128):
     dl_valid = DataLoader(dataset=ds_valid, batch_size=batch_size, shuffle=True)
     dl_test = DataLoader(dataset=ds_test, batch_size=batch_size, shuffle=True)
     
-    return dl_train, dl_valid, dl_test
+    return dl_train, dl_valid, dl_test, df_spots_neighbors
+
+
+def find_neighbors(obj, oe_spots):
+    df_spots = obj.obs[['array_row', 'array_col']].reset_index(drop=False).rename(columns={'index': 'spot_name'})
+    df_spots[['spot_encoding']] = oe_spots.transform(df_spots[['spot_name']].values)
+    df_spots['spot_encoding'] = df_spots['spot_encoding'].astype(int)
+
+    def find_spots_neighbors(spot_encoding):   
+        # Get spot location
+        mask = df_spots['spot_encoding'] == spot_encoding
+        row, col = df_spots.loc[mask, ['array_row', 'array_col']].values[0]
+        
+        # Get 1st degree neighbors
+        first_degree_neighbors = []
+        first_degree_tuples = [(2, 0), (-2, 0), (0, 2), (0, -2)]
+        for tup in first_degree_tuples:
+            mask = (df_spots['array_row'] == row+tup[0]) & (df_spots['array_col'] == col+tup[1])
+            neighbor_encoding = df_spots.loc[mask, 'spot_encoding'].values
+            if neighbor_encoding.size > 0:
+                first_degree_neighbors.append(neighbor_encoding[0])
+        
+        # Get 1st degree neighbors
+        second_degree_neighbors = []
+        second_degree_tuples = [(4, 0), (-4, 0), (0, 4), (0, -4), (1, 1), (-1, -1), (1, -1), (-1, 1)]
+        for tup in second_degree_tuples:
+            mask = (df_spots['array_row'] == (row+tup[0])) & (df_spots['array_col'] == (col+tup[1]))
+            neighbor_encoding = df_spots.loc[mask, 'spot_encoding'].values
+            if neighbor_encoding.size > 0:
+                second_degree_neighbors.append(neighbor_encoding[0])
+    
+        return first_degree_neighbors, second_degree_neighbors
+
+    # Create spots-spots matrix
+    n_spots = df_spots.shape[0]
+    df_spots_neighbors = pd.DataFrame(np.zeros(shape=(n_spots, n_spots)))
+
+    for spot_encoding in range(n_spots):
+        first_degree_neighbors, second_degree_neighbors = find_spots_neighbors(spot_encoding=spot_encoding)
+
+        if first_degree_neighbors:
+            df_spots_neighbors.iloc[spot_encoding, first_degree_neighbors] = 1
+        
+        if second_degree_neighbors:
+            df_spots_neighbors.iloc[spot_encoding].iloc[second_degree_neighbors] = 2
+
+    return df_spots_neighbors
 
 
 def get_data(model_name, dataset_name, batch_size, device):
@@ -215,9 +262,10 @@ def get_data(model_name, dataset_name, batch_size, device):
     """
     if model_name == 'MF':
         dl_train, dl_valid, dl_test = dataloaders(dataset_name=dataset_name, batch_size=batch_size, device=device)
+        df_spots_neighbors = None
     elif model_name == 'AE':
-        dl_train, dl_valid, dl_test = dataloaders_ae(dataset_name=dataset_name, batch_size=batch_size, device=device)
-    return dl_train, dl_valid, dl_test
+        dl_train, dl_valid, dl_test, df_spots_neighbors = dataloaders_ae(dataset_name=dataset_name, batch_size=batch_size, device=device)
+    return dl_train, dl_valid, dl_test, df_spots_neighbors
 
 
 # For testing only
