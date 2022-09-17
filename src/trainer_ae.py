@@ -58,12 +58,13 @@ def trainer_ae(model, optimizer, criterion, max_epochs, early_stopping, dl_train
     # Generate training and validation evaluators to print results during running
     val_metrics = {
         "loss": Loss(criterion),
-        'NonZeroRMSE': Loss(NON_ZERO_RMSELoss),
+        'NonZeroRMSE': Loss(NON_ZERO_RMSELoss()),
     }
 
     # Attach metrics to the evaluators
     val_metrics['loss'].attach(train_evaluator, 'loss')
     val_metrics['loss'].attach(val_evaluator, 'loss')
+    val_metrics['NonZeroRMSE'].attach(train_evaluator, 'NonZeroRMSE')
     val_metrics['NonZeroRMSE'].attach(val_evaluator, 'NonZeroRMSE')
 
     # Attach logger to print the training loss after each epoch
@@ -72,7 +73,7 @@ def trainer_ae(model, optimizer, criterion, max_epochs, early_stopping, dl_train
         train_evaluator.run(dl_train)
         metrics = train_evaluator.state.metrics
         print(
-            f"Training Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f}")
+            f"Training Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f} |  Avg NonZeroRMSE: {metrics['NonZeroRMSE']:.2f}")
 
     # Attach logger to print the validation loss after each epoch
     @trainer.on(Events.EPOCH_COMPLETED)
@@ -80,7 +81,7 @@ def trainer_ae(model, optimizer, criterion, max_epochs, early_stopping, dl_train
         val_evaluator.run(dl_test)
         metrics = val_evaluator.state.metrics
         print(
-            f"Validation Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f} |  Avg NonZeroRMSE: {metrics['NonZeroRMSE']:.2f}")
+            f"Validation Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f}  |  Avg NonZeroRMSE: {metrics['NonZeroRMSE']:.2f}")
 
     # Model Checkpoint
     def score_function(engine):

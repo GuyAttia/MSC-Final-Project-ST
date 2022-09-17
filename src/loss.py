@@ -104,12 +104,13 @@ class NON_ZERO_RMSELoss_Spatial_AE(nn.Module):
         super().__init__()
         self.mse = nn.MSELoss()
         self.eps = eps  # Add eps to avoid devision by 0
-        self.df_spots_neighbors = df_spots_neighbors
         self.alpha = alpha
         self.beta = beta
-
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         # Replace the neighbors closeness to the regularization value
-        self.df_spots_neighbors.replace({1.: self.alpha, 2.: self.beta}, inplace=True)
+        df_spots_neighbors.replace({1.: self.alpha, 2.: self.beta}, inplace=True)
+        self.spots_neighbors_tensor = torch.tensor(df_spots_neighbors.values, device=self.device, dtype=torch.float32)
+
 
     def forward(self, yhat, y, **kwargs):
         # Create mask for all non zero items in the tensor
@@ -117,16 +118,16 @@ class NON_ZERO_RMSELoss_Spatial_AE(nn.Module):
         y_non_zeros = y[non_zero_mask]  # Keep only non zero in y
         yhat_non_zeros = yhat[non_zero_mask]    # Keep only non zero in y_hat
 
-        non_zero_error = torch.square(yhat_non_zeros, y_non_zeros)
+        non_zero_error = torch.square(yhat_non_zeros - y_non_zeros)
         squared_error = torch.square(y - yhat)
 
         # Spatial loss
-        df_spatial_loss = np.zeros(shape=y.shape)
+        spatial_loss_tensor = torch.zeros(size=y.shape, device=self.device)
         # Iterate over all spots and find their neighbors sum loss
-        for i, spot_neighbors in enumerate(self.df_spots_neighbors.itterrows()):
-            df_spatial_loss[:, i] = squared_error @ spot_neighbors
+        for i, spot_neighbors in enumerate(self.spots_neighbors_tensor):
+            spatial_loss_tensor[:, i] = torch.matmul(input=squared_error, other=spot_neighbors)
 
-        spatial_loss_non_zeros = df_spatial_loss[non_zero_mask]    # Keep only non zero in y_hat
+        spatial_loss_non_zeros = spatial_loss_tensor[non_zero_mask]    # Keep only non zero in y_hat
 
         total_squared_error = non_zero_error + spatial_loss_non_zeros
         loss = torch.sqrt(torch.mean(total_squared_error) + self.eps)
