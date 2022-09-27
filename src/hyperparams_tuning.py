@@ -4,7 +4,7 @@ import torch
 import torch.optim as optim
 
 import trainer as trainer
-from data import get_data
+from data_ae import get_data
 from models import get_model
 from loss import *
 

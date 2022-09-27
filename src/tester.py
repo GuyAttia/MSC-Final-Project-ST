@@ -37,7 +37,7 @@ def tester(model, dl_test, device):
 
 # Only for testing
 if __name__ == '__main__':
-    from data import get_data
+    from data_ae import get_data
     from models import get_model
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

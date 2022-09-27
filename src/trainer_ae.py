@@ -140,7 +140,7 @@ def trainer_ae(model, optimizer, criterion, max_epochs, early_stopping, dl_train
 # Only for testing
 if __name__ == '__main__':
     from hyperparams_tuning import *
-    from data import *
+    from data_ae import *
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dataset_name = 'Visium_Mouse_Olfactory_Bulb'
