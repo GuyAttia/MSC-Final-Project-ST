@@ -1,4 +1,6 @@
 import stlearn as st
+from sklearn.preprocessing import OrdinalEncoder
+import pandas as pd
 
 
 def filtering(data, min_counts=None, max_counts=None, min_cells=None, max_cells=None):
@@ -58,3 +60,20 @@ def run_pca(data):
     # run PCA for gene expression data
     st.em.run_pca(data, n_comps=50)
     return data
+
+def encode_genes_and_spots(data_obj):
+    spots_values = data_obj.obs.index.values
+    genes_values = data_obj.var.index.values
+    x = data_obj.X.toarray()
+    df_expressions_matrix = pd.DataFrame(x, columns=genes_values, index=spots_values).T
+    df_expressions = df_expressions_matrix.stack().reset_index()
+    df_expressions.columns = ['gene', 'spot', 'expression']
+    
+    # Ordinal encoding the genes and spots for supported type
+    oe_genes = OrdinalEncoder()
+    df_expressions[['gene']] = oe_genes.fit_transform(df_expressions[['gene']].values)
+    oe_spots = OrdinalEncoder()
+    df_expressions[['spot']] = oe_spots.fit_transform(df_expressions[['spot']].values)
+
+    df_expressions[['spot', 'gene']] = df_expressions[['spot', 'gene']].astype(int)
+    return df_expressions, oe_spots
