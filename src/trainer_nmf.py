@@ -1,34 +1,15 @@
 from os import path
-
 import torch
+import torch.optim as optim
 from ignite.contrib.handlers import TensorboardLogger, global_step_from_engine
 from ignite.engine import Engine, Events
 from ignite.handlers import EarlyStopping, ModelCheckpoint
 from ignite.metrics import Loss
 
 from loss import *
-
-
-import torch.optim as optim
 from models import get_model
-import numpy as np
-import pandas as pd
-import stlearn as st
-import numpy as np
-import pandas as pd
-import torch
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OrdinalEncoder
-from torch import tensor
-from torch.utils.data import DataLoader, Dataset
-import torch.optim as optim
-from scanpy_stlearn_loaders import StlearnLoader
-import trainer as trainer
 
-# We used the Ignite package for smarter building of our trainers.
-# This package provide built-in loggers and handlers for different actions.
-
-def trainer(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_test, device, dataset_name, model_name):
+def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_test, device, model_name):
     """
     Build a trainer for a model
     """
@@ -106,7 +87,7 @@ def trainer(model, optimizer, criterion, max_epochs, early_stopping, dl_train, d
         return -val_loss
 
     # Model Checkpoint
-    checkpoint_dir = path.join("checkpoints", dataset_name)
+    checkpoint_dir = "checkpoints"
     # Checkpoint to store n_saved best models wrt score function
     model_checkpoint = ModelCheckpoint(
         checkpoint_dir,
@@ -132,7 +113,7 @@ def trainer(model, optimizer, criterion, max_epochs, early_stopping, dl_train, d
 
     # Tensorboard logger - log the training and evaluation losses as function of the iterations & epochs
     tb_logger = TensorboardLogger(
-        log_dir=path.join('logs', dataset_name, model_name))
+        log_dir=path.join('logs', model_name))
     tb_logger.attach_output_handler(
         trainer,
         event_name=Events.ITERATION_COMPLETED(every=100),
@@ -160,35 +141,36 @@ def trainer(model, optimizer, criterion, max_epochs, early_stopping, dl_train, d
 
 # Only for testing
 if __name__ == '__main__':
-    from data_ae import *
+    import data_nmf as get_data
     
+    apply_log=False
+    batch_size = 128
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    dataset_name = 'Visium_Mouse_Olfactory_Bulb'
+
+    model_name = 'NMF'
     max_epochs = 2
     early_stopping = 15
-    model_name = 'NMF'
-    best_params = {
+    model_params = {
         'learning_rate': 0.01,
         'optimizer': "RMSprop",
         'latent_dim': 40,
         'batch_size': 128
     }
-    dl_train, _, dl_test = get_data(dataset_name=dataset_name, batch_size=best_params['batch_size'], device=device)  # Get data
-    model = get_model(model_name, best_params, dl_train)  # Build model
-    optimizer = getattr(optim, best_params['optimizer'])(model.parameters(), lr=best_params['learning_rate'])  # Instantiate optimizer
-    df_spots_neighbors = pd.read_csv(path.join('src', 'spots_neighbors.csv'))
+
+    dl_train, dl_valid, dl_test, _ = get_data.main(apply_log=apply_log, batch_size=batch_size, device=device)
+    model = get_model(model_name, model_params, dl_train)
+    optimizer = getattr(optim, model_params['optimizer'])(model.parameters(), lr=model_params['learning_rate'])
     criterion = NON_ZERO_RMSELoss()
     # criterion = RMSELoss()
-    test_loss = trainer(
+    
+    test_loss = train(
                     model=model, 
                     optimizer=optimizer, 
-                    criterion=criterion, 
+                    criterion=criterion,
                     max_epochs=max_epochs, 
                     early_stopping=early_stopping, 
                     dl_train=dl_train, 
                     dl_test=dl_test, 
-                    device=device, 
-                    dataset_name=dataset_name, 
+                    device=device,
                     model_name=model_name
                 )
-                

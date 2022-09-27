@@ -1,5 +1,4 @@
 from os import path
-from sklearn.model_selection import train_test_split
 from torch import tensor
 from torch.utils.data import DataLoader, Dataset
 from scanpy_stlearn_loaders import StlearnLoader
@@ -113,8 +112,11 @@ def main(apply_log, batch_size, device):
 # For testing only
 if __name__ == '__main__':
     apply_log = False
-    dl_train, dl_valid, dl_test, df_spots_neighbors = main(
+    batch_size = 128
+    device = 'cpu'
+
+    dl_train, dl_valid, dl_test, _ = main(
         apply_log=apply_log, 
-        batch_size=128, 
-        device='cpu'
+        batch_size=batch_size, 
+        device=device
     )

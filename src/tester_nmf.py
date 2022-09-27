@@ -3,11 +3,10 @@ import torch
 
 from loss import *
 
-def tester(model, dl_test, device):
+def test(model, criterion, dl_test, device):
     """
     Test a trained model
     """
-    loss_fn = RMSELoss()
     test_samples = len(dl_test)
 
     model = model.to(device)
@@ -23,7 +22,7 @@ def tester(model, dl_test, device):
             spots.to(device)
             y.to('cpu')
             y_pred = model(gens, spots).to('cpu')
-            total_loss += loss_fn(y_pred, y)
+            total_loss += criterion(y_pred, y)
 
             all_gens.extend(gens.tolist())
             all_spots.extend(spots.tolist())
@@ -37,19 +36,24 @@ def tester(model, dl_test, device):
 
 # Only for testing
 if __name__ == '__main__':
-    from data_ae import get_data
+    import data_nmf as get_data
     from models import get_model
-
+    
+    apply_log = False
+    batch_size = 128
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    dataset_name = 'V1_Human_Lymph_Node'
+
     model_name = 'NMF'
-    best_params = {
-        'learning_rate': 0.001,
+    max_epochs = 2
+    early_stopping = 15
+    model_params = {
+        'learning_rate': 0.01,
         'optimizer': "RMSprop",
-        'latent_dim': 20,
-        'batch_size': 512
+        'latent_dim': 40,
+        'batch_size': 128
     }
 
-    dl_train, _, dl_test = get_data(dataset_name=dataset_name, batch_size=best_params['batch_size'], device=device)  # Get data
-    model = get_model(model_name, best_params, dl_train)  # Build model
-    test_loss = tester(model, dl_test, device)
+    dl_train, dl_valid, dl_test, _ = get_data.main(apply_log=apply_log, batch_size=batch_size, device=device)
+    model = get_model(model_name, model_params, dl_train)
+    criterion = NON_ZERO_RMSELoss()
+    test_loss = test(model, criterion, dl_test, device)
