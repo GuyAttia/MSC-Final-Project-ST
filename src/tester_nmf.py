@@ -55,5 +55,5 @@ if __name__ == '__main__':
 
     dl_train, dl_valid, dl_test, _ = get_data.main(apply_log=apply_log, batch_size=batch_size, device=device)
     model = get_model(model_name, model_params, dl_train)
-    criterion = NON_ZERO_RMSELoss()
+    criterion = RMSELoss()
     test_loss = test(model, criterion, dl_test, device)

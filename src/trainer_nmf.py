@@ -56,12 +56,10 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
 
     val_metrics = {
         "loss": Loss(criterion),
-        'NonZeroRMSE': Loss(NON_ZERO_RMSELoss),
     }
     # Attach metrics to the evaluators
     val_metrics['loss'].attach(train_evaluator, 'loss')
     val_metrics['loss'].attach(val_evaluator, 'loss')
-    val_metrics['NonZeroRMSE'].attach(val_evaluator, 'NonZeroRMSE')
 
     # Attach logger to print the training loss after each epoch
     @trainer.on(Events.EPOCH_COMPLETED)
