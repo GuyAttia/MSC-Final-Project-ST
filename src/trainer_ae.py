@@ -158,8 +158,8 @@ if __name__ == '__main__':
     dl_train, dl_valid, dl_test, df_spots_neighbors = get_data.main(min_counts=min_counts, min_cells=min_cells, apply_log=apply_log, batch_size=batch_size, device=device)
     model = get_model(model_name, model_params, dl_train)
     optimizer = getattr(optim, model_params['optimizer'])(model.parameters(), lr=model_params['learning_rate'])
-    criterion = NON_ZERO_RMSELoss_AE()
-    # criterion = NON_ZERO_RMSELoss_Spatial_AE(df_spots_neighbors=df_spots_neighbors)
+    # criterion = NON_ZERO_RMSELoss_AE()
+    criterion = NON_ZERO_RMSELoss_Spatial_AE(df_spots_neighbors=df_spots_neighbors)
 
     test_loss = train(
                     model=model, 

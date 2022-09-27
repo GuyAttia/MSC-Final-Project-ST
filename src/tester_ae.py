@@ -28,7 +28,7 @@ def test(model, criterion, dl_test, device):
             batches_list.append(y_pred)
 
     loss = total_loss / test_samples
-    df_test_preds = pd.DataFrame(torch.concat(batches_list))
+    df_test_preds = pd.DataFrame(torch.concat(batches_list).to('cpu'))
     return loss, df_test_preds
 
 
