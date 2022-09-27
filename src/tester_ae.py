@@ -3,7 +3,7 @@ import torch
 
 from loss import *
 
-def tester_ae(model, dl_test, device, loss_fn):
+def test(model, criterion, dl_test, device):
     """
     Test a trained model
     """
@@ -21,7 +21,7 @@ def tester_ae(model, dl_test, device, loss_fn):
             x = y = batch
             x.to(device)
             y_pred = model(x)
-            total_loss += loss_fn(y_pred, y)
+            total_loss += criterion(y_pred, y)
 
             # all_gens.extend(x.tolist())
             # y_list.extend(y.tolist())
@@ -34,19 +34,26 @@ def tester_ae(model, dl_test, device, loss_fn):
 
 # Only for testing
 if __name__ == '__main__':
-    from data_ae import get_data
+    import data_ae as get_data
     from models import get_model
-
+    
+    min_counts = 500
+    min_cells = 177
+    apply_log = True
+    batch_size = 128
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    dataset_name = 'Visium_Mouse_Olfactory_Bulb'
+
     model_name = 'AE'
-    best_params = {
-        'learning_rate': 0.001,
+    max_epochs = 2
+    early_stopping = 15
+    model_params = {
+        'learning_rate': 0.01,
         'optimizer': "RMSprop",
-        'latent_dim': 20,
-        'batch_size': 512
+        'latent_dim': 40,
+        'batch_size': batch_size
     }
 
-    dl_train, _, dl_test = get_data(dataset_name=dataset_name, batch_size=best_params['batch_size'], device=device)  # Get data
-    model = get_model(model_name, best_params, dl_train)  # Build model
-    test_loss = tester_ae(model, dl_test, device)
+    dl_train, dl_valid, dl_test, df_spots_neighbors = get_data.main(min_counts=min_counts, min_cells=min_cells, apply_log=apply_log, batch_size=batch_size, device=device)
+    model = get_model(model_name, model_params, dl_train)
+    criterion = NON_ZERO_RMSELoss_AE()
+    test_loss = test(model, criterion, dl_test, device)

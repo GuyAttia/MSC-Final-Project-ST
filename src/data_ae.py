@@ -18,18 +18,18 @@ def load_anndata_object():
     print(f'# spots: {n_spots} | # genes: {n_genes}')
     return obj
 
-def run_preprocessing(data_obj, apply_log=False):
-    data_obj = preprocessing.filtering(data=data_obj, min_counts=10, min_cells=177)
+def run_preprocessing(data_obj, min_counts, min_cells, apply_log=False):
+    data_obj = preprocessing.filtering(data=data_obj, min_counts=min_counts, min_cells=min_cells)
     if apply_log:
         data_obj = preprocessing.log_transform(data=data_obj)
     
     df_expressions, oe_spots = preprocessing.encode_genes_and_spots(data_obj=data_obj)
     return data_obj, df_expressions, oe_spots
 
-def get_expressions(apply_log):
+def get_expressions(min_counts, min_cells, apply_log):
     # Load the expressions data into a Pandas DataFrame
     data_obj = load_anndata_object()
-    data_obj, df_expressions, oe_spots = run_preprocessing(data_obj=data_obj, apply_log=apply_log)
+    data_obj, df_expressions, oe_spots = run_preprocessing(data_obj=data_obj, min_counts=min_counts, min_cells=min_cells, apply_log=apply_log)
 
     print(f'Data shape: {df_expressions.shape}')
     print(f'Number of genes: {df_expressions["gene"].nunique()}')
@@ -190,8 +190,8 @@ class VectorsDataSet(Dataset):
         return self.data, self.mask
 
 
-def main(apply_log, batch_size, device):
-    expressions, obj, oe_spots = get_expressions(apply_log)
+def main(min_counts, min_cells, apply_log, batch_size, device):
+    expressions, obj, oe_spots = get_expressions(min_counts, min_cells, apply_log)
     df_spots_neighbors = find_neighbors(obj, oe_spots)
 
     df_train, df_valid, df_test = train_valid_test_split(df=expressions)
@@ -212,9 +212,16 @@ def main(apply_log, batch_size, device):
 
 # For testing only
 if __name__ == '__main__':
+    min_counts = 10
+    min_cells = 177
     apply_log = False
+    batch_size = 128
+    device = 'cpu'
+
     dl_train, dl_valid, dl_test, df_spots_neighbors = main(
+        min_counts=min_counts,
+        min_cells=min_cells,
         apply_log=apply_log, 
-        batch_size=128, 
-        device='cpu'
+        batch_size=batch_size, 
+        device=device
     )

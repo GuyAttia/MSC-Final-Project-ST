@@ -7,25 +7,21 @@ from ignite.contrib.handlers import TensorboardLogger, global_step_from_engine
 
 from loss import *
 
-# We used the Ignite package for smarter building of our trainers.
-# This package provide built-in loggers and handlers for different actions.
-
-
-def trainer_ae(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_test, device, dataset_name, model_name):
+def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_test, device):
     """
     Build a trainer for the AE model
     """
     model = model.to(device)
     # Define the loss function - AutoEnc data loaders are the genes/spots vectors, therefore contains a lot of non-relevant zeros,
     # so we used our custom RMSE which don't take them into account.
-    # criterion = NON_ZERO_RMSELoss()
 
     def train_step(engine, batch):
         """
         Define the train step.
         Each sample in the batch is a user/item vector, which is also the target (what we want to reconstruct)
         """
-        x = y = batch
+        x, _ = batch
+        y = x
         x.to(device)
 
         model.train()
@@ -47,8 +43,10 @@ def trainer_ae(model, optimizer, criterion, max_epochs, early_stopping, dl_train
         model.eval()
 
         with torch.no_grad():
-            x = y = batch
+            x, batch_mask = batch
+            y = x
             x.to(device)
+            batch_mask.to(device)
             y_pred = model(x)
             return y_pred, y
 
@@ -88,7 +86,7 @@ def trainer_ae(model, optimizer, criterion, max_epochs, early_stopping, dl_train
         val_loss = engine.state.metrics['loss']
         return -val_loss
 
-    checkpoint_dir = path.join("checkpoints", dataset_name)
+    checkpoint_dir = "checkpoints"
 
     # Checkpoint to store n_saved best models wrt score function
     model_checkpoint = ModelCheckpoint(
@@ -112,7 +110,7 @@ def trainer_ae(model, optimizer, criterion, max_epochs, early_stopping, dl_train
 
     # Tensorboard logger - log the training and evaluation losses as function of the iterations & epochs
     tb_logger = TensorboardLogger(log_dir=path.join(
-        'tb-logger', dataset_name, 'AE'))
+        'tb-logger', 'AE'))
     tb_logger.attach_output_handler(
         trainer,
         event_name=Events.ITERATION_COMPLETED(every=100),
@@ -139,37 +137,39 @@ def trainer_ae(model, optimizer, criterion, max_epochs, early_stopping, dl_train
 
 # Only for testing
 if __name__ == '__main__':
-    from hyperparams_tuning import *
-    from data_ae import *
+    import torch.optim as optim
+    import data_ae as get_data
+    from models import get_model
 
+    min_counts = 500
+    min_cells = 177
+    apply_log=True
+    batch_size = 128
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    dataset_name = 'Visium_Mouse_Olfactory_Bulb'
 
-    max_epochs = 2
-    early_stopping = 1
     model_name = 'AE'
-    best_params = {
-        'learning_rate': 0.001,
+    max_epochs = 2
+    early_stopping = 15
+    model_params = {
+        'learning_rate': 0.01,
         'optimizer': "RMSprop",
         'latent_dim': 40,
-        'batch_size': 128
+        'batch_size': batch_size
     }
-    dl_train, _, dl_test, df_spots_neighbors = get_data(model_name=model_name,
-        dataset_name=dataset_name, batch_size=best_params['batch_size'], device=device)
-    print('got data')
-    model = get_model(model_name, best_params, dl_train)  # Build model
-    optimizer = getattr(optim, best_params['optimizer'])(
-        model.parameters(), lr=best_params['learning_rate'])  # Instantiate optimizer
-    criterion = NON_ZERO_RMSELoss_Spatial_AE(df_spots_neighbors=df_spots_neighbors)
-    test_loss = trainer_ae(
-        model=model, 
-        optimizer=optimizer, 
-        criterion=criterion,
-        max_epochs=max_epochs, 
-        early_stopping=early_stopping,
-        dl_train=dl_train,
-        dl_test=dl_test, 
-        device=device, 
-        dataset_name=dataset_name,
-        model_name=model_name
-        )
+
+    dl_train, dl_valid, dl_test, df_spots_neighbors = get_data.main(min_counts=min_counts, min_cells=min_cells, apply_log=apply_log, batch_size=batch_size, device=device)
+    model = get_model(model_name, model_params, dl_train)
+    optimizer = getattr(optim, model_params['optimizer'])(model.parameters(), lr=model_params['learning_rate'])
+    criterion = NON_ZERO_RMSELoss_AE()
+    # criterion = NON_ZERO_RMSELoss_Spatial_AE(df_spots_neighbors=df_spots_neighbors)
+
+    test_loss = train(
+                    model=model, 
+                    optimizer=optimizer, 
+                    criterion=criterion,
+                    max_epochs=max_epochs, 
+                    early_stopping=early_stopping, 
+                    dl_train=dl_train, 
+                    dl_test=dl_test, 
+                    device=device
+                )

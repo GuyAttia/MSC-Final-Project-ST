@@ -111,7 +111,7 @@ def main(min_counts, min_cells, apply_log, batch_size, device):
 
 # For testing only
 if __name__ == '__main__':
-    min_counts = 10
+    min_counts = 500
     min_cells = 177
     apply_log = False
     batch_size = 128

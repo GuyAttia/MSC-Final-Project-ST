@@ -1,15 +1,13 @@
 from os import path
 import torch
-import torch.optim as optim
 from ignite.contrib.handlers import TensorboardLogger, global_step_from_engine
 from ignite.engine import Engine, Events
 from ignite.handlers import EarlyStopping, ModelCheckpoint
 from ignite.metrics import Loss
 
 from loss import *
-from models import get_model
 
-def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_test, device, model_name):
+def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_test, device):
     """
     Build a trainer for a model
     """
@@ -75,7 +73,7 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
         val_evaluator.run(dl_test)
         metrics = val_evaluator.state.metrics
         print(
-            f"Validation Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f}  |  Avg NonZeroRMSE: {metrics['NonZeroRMSE']:.2f}")
+            f"Validation Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f}")
 
     def score_function(engine):
         """
@@ -90,7 +88,7 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
     model_checkpoint = ModelCheckpoint(
         checkpoint_dir,
         n_saved=1,
-        filename_prefix=f"best_{model_name}",
+        filename_prefix=f"best_NMF",
         score_function=score_function,
         score_name='neg_loss',
         global_step_transform=global_step_from_engine(trainer),  # helps fetch the trainer's state
@@ -111,7 +109,7 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
 
     # Tensorboard logger - log the training and evaluation losses as function of the iterations & epochs
     tb_logger = TensorboardLogger(
-        log_dir=path.join('logs', model_name))
+        log_dir=path.join('logs', 'NMF'))
     tb_logger.attach_output_handler(
         trainer,
         event_name=Events.ITERATION_COMPLETED(every=100),
@@ -139,8 +137,12 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
 
 # Only for testing
 if __name__ == '__main__':
+    import torch.optim as optim
     import data_nmf as get_data
+    from models import get_model
     
+    min_counts = 500
+    min_cells = 177
     apply_log=False
     batch_size = 128
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -152,10 +154,10 @@ if __name__ == '__main__':
         'learning_rate': 0.01,
         'optimizer': "RMSprop",
         'latent_dim': 40,
-        'batch_size': 128
+        'batch_size': batch_size
     }
 
-    dl_train, dl_valid, dl_test, _ = get_data.main(apply_log=apply_log, batch_size=batch_size, device=device)
+    dl_train, dl_valid, dl_test, _ = get_data.main(min_counts=min_counts, min_cells=min_cells, apply_log=apply_log, batch_size=batch_size, device=device)
     model = get_model(model_name, model_params, dl_train)
     optimizer = getattr(optim, model_params['optimizer'])(model.parameters(), lr=model_params['learning_rate'])
     criterion = NON_ZERO_RMSELoss()
@@ -169,6 +171,5 @@ if __name__ == '__main__':
                     early_stopping=early_stopping, 
                     dl_train=dl_train, 
                     dl_test=dl_test, 
-                    device=device,
-                    model_name=model_name
+                    device=device
                 )

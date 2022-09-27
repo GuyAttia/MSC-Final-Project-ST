@@ -39,6 +39,8 @@ if __name__ == '__main__':
     import data_nmf as get_data
     from models import get_model
     
+    min_counts = 500
+    min_cells = 177
     apply_log = False
     batch_size = 128
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -50,10 +52,10 @@ if __name__ == '__main__':
         'learning_rate': 0.01,
         'optimizer': "RMSprop",
         'latent_dim': 40,
-        'batch_size': 128
+        'batch_size': batch_size
     }
 
-    dl_train, dl_valid, dl_test, _ = get_data.main(apply_log=apply_log, batch_size=batch_size, device=device)
+    dl_train, dl_valid, dl_test, _ = get_data.main(min_counts=min_counts, min_cells=min_cells, apply_log=apply_log, batch_size=batch_size, device=device)
     model = get_model(model_name, model_params, dl_train)
     criterion = RMSELoss()
     test_loss = test(model, criterion, dl_test, device)
