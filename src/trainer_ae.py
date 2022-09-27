@@ -20,13 +20,14 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
         Define the train step.
         Each sample in the batch is a user/item vector, which is also the target (what we want to reconstruct)
         """
-        x, _ = batch
+        x, batch_mask = batch
         y = x
         x.to(device)
+        batch_mask.to(device)
 
         model.train()
         y_pred = model(x)
-        loss = criterion(y_pred, y)
+        loss = criterion(y_pred, y, batch_mask)
 
         # Backpropagation
         optimizer.zero_grad()
@@ -48,7 +49,7 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
             x.to(device)
             batch_mask.to(device)
             y_pred = model(x)
-            return y_pred, y
+            return y_pred, y, {'batch_mask': batch_mask}
 
     train_evaluator = Engine(validation_step)
     val_evaluator = Engine(validation_step)
@@ -56,14 +57,11 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
     # Generate training and validation evaluators to print results during running
     val_metrics = {
         "loss": Loss(criterion),
-        'NonZeroRMSE': Loss(NON_ZERO_RMSELoss()),
     }
 
     # Attach metrics to the evaluators
     val_metrics['loss'].attach(train_evaluator, 'loss')
     val_metrics['loss'].attach(val_evaluator, 'loss')
-    val_metrics['NonZeroRMSE'].attach(train_evaluator, 'NonZeroRMSE')
-    val_metrics['NonZeroRMSE'].attach(val_evaluator, 'NonZeroRMSE')
 
     # Attach logger to print the training loss after each epoch
     @trainer.on(Events.EPOCH_COMPLETED)
@@ -71,7 +69,7 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
         train_evaluator.run(dl_train)
         metrics = train_evaluator.state.metrics
         print(
-            f"Training Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f} |  Avg NonZeroRMSE: {metrics['NonZeroRMSE']:.2f}")
+            f"Training Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f}")
 
     # Attach logger to print the validation loss after each epoch
     @trainer.on(Events.EPOCH_COMPLETED)
@@ -79,7 +77,7 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
         val_evaluator.run(dl_test)
         metrics = val_evaluator.state.metrics
         print(
-            f"Validation Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f}  |  Avg NonZeroRMSE: {metrics['NonZeroRMSE']:.2f}")
+            f"Validation Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f}")
 
     # Model Checkpoint
     def score_function(engine):
@@ -141,7 +139,7 @@ if __name__ == '__main__':
     import data_ae as get_data
     from models import get_model
 
-    min_counts = 500
+    min_counts = 3500
     min_cells = 177
     apply_log=True
     batch_size = 128

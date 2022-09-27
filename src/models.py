@@ -113,7 +113,7 @@ def get_model(model_name, params, dl_train):
         num_spots = dl_train.dataset.num_spots
         model = NMF(num_genes=num_genes, num_spots=num_spots, params=params)
     elif model_name == 'AE':
-        n_dim = dl_train.dataset.__getitem__(1).shape[0]
+        n_dim = dl_train.dataset.__getitem__(1)[0].shape[0]
         linear_encoder = EncoderLinear(in_dim=n_dim, params=params)
         linear_decoder = DecoderLinear(out_dim=n_dim, params=params)
         model = AE(encoder=linear_encoder, decoder=linear_decoder)

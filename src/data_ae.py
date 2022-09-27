@@ -1,6 +1,7 @@
 from os import path
 import numpy as np
 import pandas as pd
+import torch
 from torch import tensor
 from torch.utils.data import DataLoader, Dataset
 from scanpy_stlearn_loaders import StlearnLoader
@@ -176,7 +177,7 @@ class VectorsDataSet(Dataset):
 
     def __init__(self, expressions_matrix, expressions_mask, device) -> None:
         self.data = tensor(expressions_matrix.values).float().to(device)
-        self.mask = tensor(expressions_mask.values).float().to(device)
+        self.mask = tensor(expressions_mask.values, dtype=torch.bool).to(device)
 
     def __getitem__(self, index: int):
         vec = self.data[index]
