@@ -76,4 +76,4 @@ def encode_genes_and_spots(data_obj):
     df_expressions[['spot']] = oe_spots.fit_transform(df_expressions[['spot']].values)
 
     df_expressions[['spot', 'gene']] = df_expressions[['spot', 'gene']].astype(int)
-    return df_expressions, oe_spots
+    return df_expressions, oe_spots, oe_genes

@@ -1,5 +1,6 @@
 from os import path, mkdir
 import numpy as np
+import pickle
 import pandas as pd
 import torch
 from torch import tensor
@@ -24,18 +25,18 @@ def run_preprocessing(data_obj, min_counts, min_cells, apply_log=False):
     if apply_log:
         data_obj = preprocessing.log_transform(data=data_obj)
     
-    df_expressions, oe_spots = preprocessing.encode_genes_and_spots(data_obj=data_obj)
-    return data_obj, df_expressions, oe_spots
+    df_expressions, oe_spots, oe_genes = preprocessing.encode_genes_and_spots(data_obj=data_obj)
+    return data_obj, df_expressions, oe_spots, oe_genes
 
 def get_expressions(min_counts, min_cells, apply_log):
     # Load the expressions data into a Pandas DataFrame
     data_obj = load_anndata_object()
-    data_obj, df_expressions, oe_spots = run_preprocessing(data_obj=data_obj, min_counts=min_counts, min_cells=min_cells, apply_log=apply_log)
+    data_obj, df_expressions, oe_spots, oe_genes = run_preprocessing(data_obj=data_obj, min_counts=min_counts, min_cells=min_cells, apply_log=apply_log)
 
     print(f'Data shape: {df_expressions.shape}')
     print(f'Number of genes: {df_expressions["gene"].nunique()}')
     print(f'Number of spots: {df_expressions["spot"].nunique()}')
-    return df_expressions, data_obj, oe_spots
+    return df_expressions, data_obj, oe_spots, oe_genes
 
 def find_neighbors(obj, oe_spots):
     df_spots = obj.obs[['array_row', 'array_col']].reset_index(drop=False).rename(columns={'index': 'spot_name'})
@@ -98,8 +99,8 @@ def train_valid_test_split(df):
         return df
 
     df['true_expression'] = df['expression']
-    df = set_random_zeros(df, random_size=0.1, dataset_mask='test')
-    df = set_random_zeros(df, random_size=0.1, dataset_mask='valid')
+    df = set_random_zeros(df, random_size=0.2, dataset_mask='test')
+    df = set_random_zeros(df, random_size=0.2, dataset_mask='valid')
 
     df_train = df.loc[:, ['gene', 'spot', 'expression']]
     
@@ -200,7 +201,11 @@ def main(min_counts, min_cells, apply_log, batch_size, device):
         dl_valid = torch.load(path.join('/', 'data', 'AE', 'dl_valid.pth'))
         dl_test = torch.load(path.join('/', 'data', 'AE', 'dl_test.pth'))
     else:
-        expressions, obj, oe_spots = get_expressions(min_counts, min_cells, apply_log)
+        expressions, obj, oe_spots, oe_genes = get_expressions(min_counts, min_cells, apply_log)
+        with open(path.join('/', 'data', 'AE', 'spots_encoder.pkl'), 'wb') as f:
+            pickle.dump(oe_spots, f)
+        with open(path.join('/', 'data', 'AE', 'genes_encoder.pkl'), 'wb') as f:
+            pickle.dump(oe_genes, f)
         df_spots_neighbors = find_neighbors(obj, oe_spots)
 
         df_train, df_valid, df_test = train_valid_test_split(df=expressions)
@@ -226,7 +231,7 @@ def main(min_counts, min_cells, apply_log, batch_size, device):
 
 # For testing only
 if __name__ == '__main__':
-    min_counts = 10
+    min_counts = 500
     min_cells = 177
     apply_log = False
     batch_size = 128
