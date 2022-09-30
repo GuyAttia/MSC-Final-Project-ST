@@ -57,11 +57,13 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
     # Generate training and validation evaluators to print results during running
     val_metrics = {
         "loss": Loss(criterion),
+        "RMSE": Loss(NON_ZERO_RMSELoss_AE()),
     }
 
     # Attach metrics to the evaluators
     val_metrics['loss'].attach(train_evaluator, 'loss')
     val_metrics['loss'].attach(val_evaluator, 'loss')
+    val_metrics['RMSE'].attach(val_evaluator, 'RMSE')
 
     # Attach logger to print the training loss after each epoch
     @trainer.on(Events.EPOCH_COMPLETED)
@@ -77,11 +79,11 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
         val_evaluator.run(dl_test)
         metrics = val_evaluator.state.metrics
         print(
-            f"Validation Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f}")
+            f"Validation Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f} | Avg RMSE: {metrics['RMSE']:.2f}")
 
     # Model Checkpoint
     def score_function(engine):
-        val_loss = engine.state.metrics['loss']
+        val_loss = engine.state.metrics['RMSE']
         return -val_loss
 
     checkpoint_dir = "checkpoints"
