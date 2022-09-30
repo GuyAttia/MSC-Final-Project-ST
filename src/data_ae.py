@@ -1,4 +1,4 @@
-from os import path
+from os import path, mkdir
 import numpy as np
 import pandas as pd
 import torch
@@ -192,21 +192,34 @@ class VectorsDataSet(Dataset):
 
 
 def main(min_counts, min_cells, apply_log, batch_size, device):
-    expressions, obj, oe_spots = get_expressions(min_counts, min_cells, apply_log)
-    df_spots_neighbors = find_neighbors(obj, oe_spots)
+    if not path.isdir(path.join('/', 'data', 'AE')):
+        mkdir(path.join('/', 'data', 'AE'))
+        
+    if path.isfile(path.join('/', 'data', 'AE', 'dl_train.pth')):
+        dl_train = torch.load(path.join('/', 'data', 'AE', 'dl_train.pth'))
+        dl_valid = torch.load(path.join('/', 'data', 'AE', 'dl_valid.pth'))
+        dl_test = torch.load(path.join('/', 'data', 'AE', 'dl_test.pth'))
+    else:
+        expressions, obj, oe_spots = get_expressions(min_counts, min_cells, apply_log)
+        df_spots_neighbors = find_neighbors(obj, oe_spots)
 
-    df_train, df_valid, df_test = train_valid_test_split(df=expressions)
+        df_train, df_valid, df_test = train_valid_test_split(df=expressions)
 
-    expressions_train, expressions_valid, expressions_test, expressions_mask_train, expressions_mask_valid, expressions_mask_test = create_matrix(
-        expressions, df_train, df_valid, df_test)
+        expressions_train, expressions_valid, expressions_test, expressions_mask_train, expressions_mask_valid, expressions_mask_test = create_matrix(
+            expressions, df_train, df_valid, df_test)
 
-    ds_train = VectorsDataSet(expressions_matrix=expressions_train, expressions_mask=expressions_mask_train, device=device)
-    ds_valid = VectorsDataSet(expressions_matrix=expressions_valid, expressions_mask=expressions_mask_valid, device=device)
-    ds_test = VectorsDataSet(expressions_matrix=expressions_test, expressions_mask=expressions_mask_test, device=device)
+        ds_train = VectorsDataSet(expressions_matrix=expressions_train, expressions_mask=expressions_mask_train, device=device)
+        ds_valid = VectorsDataSet(expressions_matrix=expressions_valid, expressions_mask=expressions_mask_valid, device=device)
+        ds_test = VectorsDataSet(expressions_matrix=expressions_test, expressions_mask=expressions_mask_test, device=device)
 
-    dl_train = DataLoader(dataset=ds_train, batch_size=batch_size, shuffle=True)
-    dl_valid = DataLoader(dataset=ds_valid, batch_size=batch_size, shuffle=True)
-    dl_test = DataLoader(dataset=ds_test, batch_size=batch_size, shuffle=True)
+        dl_train = DataLoader(dataset=ds_train, batch_size=batch_size, shuffle=True)
+        dl_valid = DataLoader(dataset=ds_valid, batch_size=batch_size, shuffle=True)
+        dl_test = DataLoader(dataset=ds_test, batch_size=batch_size, shuffle=True)
+
+        # Saving DataLoaders
+        torch.save(dl_train, path.join('/', 'data', 'AE', 'dl_train.pth'))
+        torch.save(dl_valid, path.join('/', 'data', 'AE', 'dl_valid.pth'))
+        torch.save(dl_test, path.join('/', 'data', 'AE', 'dl_test.pth'))
 
     print('Finish loading the data')
     return dl_train, dl_valid, dl_test, df_spots_neighbors

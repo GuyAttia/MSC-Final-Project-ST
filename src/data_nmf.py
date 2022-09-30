@@ -1,4 +1,5 @@
-from os import path
+from os import path, mkdir
+import torch
 from torch import tensor
 from torch.utils.data import DataLoader, Dataset
 from scanpy_stlearn_loaders import StlearnLoader
@@ -91,20 +92,33 @@ class ExpressionDataset(Dataset):
 
 
 def main(min_counts, min_cells, apply_log, batch_size, device):
-    expressions, _, _ = get_expressions(min_counts, min_cells, apply_log)
+    if not path.isdir(path.join('/', 'data', 'NMF')):
+        mkdir(path.join('/', 'data', 'NMF'))
+        
+    if path.isfile(path.join('/', 'data', 'NMF', 'dl_train.pth')):
+        dl_train = torch.load(path.join('/', 'data', 'NMF', 'dl_train.pth'))
+        dl_valid = torch.load(path.join('/', 'data', 'NMF', 'dl_valid.pth'))
+        dl_test = torch.load(path.join('/', 'data', 'NMF', 'dl_test.pth'))
+    else:
+        expressions, _, _ = get_expressions(min_counts, min_cells, apply_log)
 
-    df_train, df_valid, df_test = train_valid_test_split(df=expressions)
+        df_train, df_valid, df_test = train_valid_test_split(df=expressions)
 
-    print('Start creating the DataSets')
-    ds_train = ExpressionDataset(df=df_train, device=device)
-    ds_valid = ExpressionDataset(df=df_valid, device=device)
-    ds_test = ExpressionDataset(df=df_test, device=device)
+        print('Start creating the DataSets')
+        ds_train = ExpressionDataset(df=df_train, device=device)
+        ds_valid = ExpressionDataset(df=df_valid, device=device)
+        ds_test = ExpressionDataset(df=df_test, device=device)
 
-    print('Start creating the DataLoaders')
-    dl_train = DataLoader(dataset=ds_train, batch_size=batch_size, shuffle=True)
-    dl_valid = DataLoader(dataset=ds_valid, batch_size=batch_size, shuffle=True)
-    dl_test = DataLoader(dataset=ds_test, batch_size=batch_size, shuffle=True)
+        print('Start creating the DataLoaders')
+        dl_train = DataLoader(dataset=ds_train, batch_size=batch_size, shuffle=True)
+        dl_valid = DataLoader(dataset=ds_valid, batch_size=batch_size, shuffle=True)
+        dl_test = DataLoader(dataset=ds_test, batch_size=batch_size, shuffle=True)
 
+        # Saving DataLoaders
+        torch.save(dl_train, path.join('/', 'data', 'NMF', 'dl_train.pth'))
+        torch.save(dl_valid, path.join('/', 'data', 'NMF', 'dl_valid.pth'))
+        torch.save(dl_test, path.join('/', 'data', 'NMF', 'dl_test.pth'))
+    
     print('Finish loading the data')
     return dl_train, dl_valid, dl_test, None
 
