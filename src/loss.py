@@ -80,16 +80,16 @@ class NON_ZERO_RMSELoss_Spatial_AE(nn.Module):
 
 
     def forward(self, yhat, y, batch_mask, **kwargs):
-        # Keep only relevant samples (for validation and test datasets)
-        y = y[batch_mask]
-        yhat = yhat[batch_mask]
+        if batch_mask is not None:  # for valid and test sets
+            actual_mask = batch_mask
+        else:   # For training
+            # Create mask for all non zero items in the tensor
+            actual_mask = torch.nonzero(y, as_tuple=True)
+        
+        y_masked = y[actual_mask]  # Keep only masked in y
+        yhat_masked = yhat[actual_mask]    # Keep only masked in y_hat
 
-        # Create mask for all non zero items in the tensor
-        non_zero_mask = torch.nonzero(y, as_tuple=True)
-        y_non_zeros = y[non_zero_mask]  # Keep only non zero in y
-        yhat_non_zeros = yhat[non_zero_mask]    # Keep only non zero in y_hat
-
-        non_zero_error = torch.square(yhat_non_zeros - y_non_zeros)
+        masked_error = torch.square(yhat_masked - y_masked)
         squared_error = torch.square(y - yhat)
 
         # Spatial loss
@@ -98,8 +98,8 @@ class NON_ZERO_RMSELoss_Spatial_AE(nn.Module):
         for i, spot_neighbors in enumerate(self.spots_neighbors_tensor):
             spatial_loss_tensor[:, i] = torch.matmul(input=squared_error, other=spot_neighbors)
 
-        spatial_loss_non_zeros = spatial_loss_tensor[non_zero_mask]    # Keep only non zero in y_hat
+        spatial_loss_masked = spatial_loss_tensor[actual_mask]    # Keep only masked
 
-        total_squared_error = non_zero_error + spatial_loss_non_zeros
+        total_squared_error = masked_error + spatial_loss_masked
         loss = torch.sqrt(torch.mean(total_squared_error) + self.eps)
         return loss

@@ -23,11 +23,11 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
         x, batch_mask = batch
         y = x
         x.to(device)
-        batch_mask.to(device)
+        # batch_mask.to(device)
 
         model.train()
         y_pred = model(x)
-        loss = criterion(y_pred, y, batch_mask)
+        loss = criterion(y_pred, y, None)
 
         # Backpropagation
         optimizer.zero_grad()
@@ -137,9 +137,10 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
 if __name__ == '__main__':
     import torch.optim as optim
     import data_ae as get_data
+    from data_ae import VectorsDataSet
     from models import get_model
 
-    min_counts = 3500
+    min_counts = 500
     min_cells = 177
     apply_log=True
     batch_size = 128

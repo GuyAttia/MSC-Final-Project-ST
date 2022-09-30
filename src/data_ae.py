@@ -200,13 +200,16 @@ def main(min_counts, min_cells, apply_log, batch_size, device):
         dl_train = torch.load(path.join('/', 'data', 'AE', 'dl_train.pth'))
         dl_valid = torch.load(path.join('/', 'data', 'AE', 'dl_valid.pth'))
         dl_test = torch.load(path.join('/', 'data', 'AE', 'dl_test.pth'))
+        df_spots_neighbors = pd.read_csv(path.join('/', 'data', 'AE', 'spots_neighbors.csv'))
     else:
         expressions, obj, oe_spots, oe_genes = get_expressions(min_counts, min_cells, apply_log)
         with open(path.join('/', 'data', 'AE', 'spots_encoder.pkl'), 'wb') as f:
             pickle.dump(oe_spots, f)
         with open(path.join('/', 'data', 'AE', 'genes_encoder.pkl'), 'wb') as f:
             pickle.dump(oe_genes, f)
+        
         df_spots_neighbors = find_neighbors(obj, oe_spots)
+        df_spots_neighbors.to_csv(path.join('/', 'data', 'AE', 'spots_neighbors.csv'), index=False)
 
         df_train, df_valid, df_test = train_valid_test_split(df=expressions)
 

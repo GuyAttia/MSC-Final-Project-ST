@@ -139,6 +139,7 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
 if __name__ == '__main__':
     import torch.optim as optim
     import data_nmf as get_data
+    from data_nmf import ExpressionDataset
     from models import get_model
     
     min_counts = 500
