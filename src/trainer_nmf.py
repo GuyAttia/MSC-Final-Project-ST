@@ -7,7 +7,7 @@ from ignite.metrics import Loss
 
 from loss import *
 
-def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_test, device):
+def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_test, device, trial_name='normal'):
     """
     Build a trainer for a model
     """
@@ -88,7 +88,7 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
     model_checkpoint = ModelCheckpoint(
         checkpoint_dir,
         n_saved=1,
-        filename_prefix=f"best_NMF",
+        filename_prefix=f"best_NMF_{trial_name}",
         score_function=score_function,
         score_name='neg_loss',
         global_step_transform=global_step_from_engine(trainer),  # helps fetch the trainer's state
@@ -109,7 +109,7 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
 
     # Tensorboard logger - log the training and evaluation losses as function of the iterations & epochs
     tb_logger = TensorboardLogger(
-        log_dir=path.join('logs', 'NMF'))
+        log_dir=path.join('logs', 'NMF', trial_name))
     tb_logger.attach_output_handler(
         trainer,
         event_name=Events.ITERATION_COMPLETED(every=100),
