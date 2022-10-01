@@ -50,16 +50,17 @@ class NON_ZERO_RMSELoss_AE(nn.Module):
         self.eps = eps  # Add eps to avoid devision by 0
 
     def forward(self, yhat, y, batch_mask, **kwargs):
-        # Keep only relevant samples (for validation and test datasets)
-        y = y[batch_mask]
-        yhat = yhat[batch_mask]
-        
-        # Create mask for all non zero items in the tensor
-        non_zero_mask = torch.nonzero(y, as_tuple=True)
-        y_non_zeros = y[non_zero_mask]  # Keep only non zero in y
-        yhat_non_zeros = yhat[non_zero_mask]    # Keep only non zero in y_hat
+        if batch_mask is not None:  # for valid and test sets
+            actual_mask = batch_mask
+        else:   # For training
+            # Create mask for all non zero items in the tensor
+            actual_mask = torch.nonzero(y, as_tuple=True)
 
-        loss = torch.sqrt(self.mse(yhat_non_zeros, y_non_zeros) + self.eps)
+        # Create mask for all non zero items in the tensor
+        y_masked = y[actual_mask]  # Keep only non zero in y
+        yhat_masked = yhat[actual_mask]    # Keep only non zero in y_hat
+
+        loss = torch.sqrt(self.mse(yhat_masked, y_masked) + self.eps)
         return loss
 
 class NON_ZERO_RMSELoss_Spatial_AE(nn.Module):

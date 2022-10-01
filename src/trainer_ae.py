@@ -7,7 +7,7 @@ from ignite.contrib.handlers import TensorboardLogger, global_step_from_engine
 
 from loss import *
 
-def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_test, device, trial_name='normal'):
+def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_valid, dl_test, device, trial_name='normal'):
     """
     Build a trainer for the AE model
     """
@@ -20,7 +20,7 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
         Define the train step.
         Each sample in the batch is a user/item vector, which is also the target (what we want to reconstruct)
         """
-        x, batch_mask = batch
+        x, _ = batch
         y = x
         x.to(device)
         # batch_mask.to(device)
@@ -53,6 +53,7 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
 
     train_evaluator = Engine(validation_step)
     val_evaluator = Engine(validation_step)
+    test_evaluator = Engine(validation_step)
 
     # Generate training and validation evaluators to print results during running
     val_metrics = {
@@ -64,6 +65,7 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
     val_metrics['loss'].attach(train_evaluator, 'loss')
     val_metrics['loss'].attach(val_evaluator, 'loss')
     val_metrics['RMSE'].attach(val_evaluator, 'RMSE')
+    val_metrics['RMSE'].attach(test_evaluator, 'RMSE')
 
     # Attach logger to print the training loss after each epoch
     @trainer.on(Events.EPOCH_COMPLETED)
@@ -76,10 +78,18 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
     # Attach logger to print the validation loss after each epoch
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_validation_results(trainer):
-        val_evaluator.run(dl_test)
+        val_evaluator.run(dl_valid)
         metrics = val_evaluator.state.metrics
         print(
             f"Validation Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f} | Avg RMSE: {metrics['RMSE']:.2f}")
+
+    # Attach logger to print the test loss at the end
+    @trainer.on(Events.COMPLETED)
+    def log_test_results(trainer):
+        test_evaluator.run(dl_test)
+        metrics = test_evaluator.state.metrics
+        print(
+            f"Test Results - Avg RMSE: {metrics['RMSE']:.2f}")
 
     # Model Checkpoint
     def score_function(engine):
@@ -170,6 +180,7 @@ if __name__ == '__main__':
                     max_epochs=max_epochs, 
                     early_stopping=early_stopping, 
                     dl_train=dl_train, 
+                    dl_valid=dl_valid, 
                     dl_test=dl_test, 
                     device=device
                 )
