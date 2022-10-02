@@ -55,11 +55,13 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
 
     val_metrics = {
         "loss": Loss(criterion),
+        "RMSE": Loss(RMSELoss()),
     }
     # Attach metrics to the evaluators
     val_metrics['loss'].attach(train_evaluator, 'loss')
     val_metrics['loss'].attach(val_evaluator, 'loss')
-    val_metrics['loss'].attach(test_evaluator, 'loss')
+    val_metrics['RMSE'].attach(val_evaluator, 'RMSE')
+    val_metrics['RMSE'].attach(test_evaluator, 'RMSE')
 
     # Attach logger to print the training loss after each epoch
     @trainer.on(Events.EPOCH_COMPLETED)
@@ -75,7 +77,7 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
         val_evaluator.run(dl_valid)
         metrics = val_evaluator.state.metrics
         print(
-            f"Validation Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f}")
+            f"Validation Results - Epoch[{trainer.state.epoch}] Avg loss: {metrics['loss']:.2f} | Avg RMSE: {metrics['RMSE']:.2f} ")
 
     # Attach logger to print the test loss
     @trainer.on(Events.COMPLETED)
@@ -83,7 +85,7 @@ def train(model, optimizer, criterion, max_epochs, early_stopping, dl_train, dl_
         test_evaluator.run(dl_test)
         metrics = test_evaluator.state.metrics
         print(
-            f"Test Results - Avg loss: {metrics['loss']:.2f}")
+            f"Test Results - Avg RMSE: {metrics['RMSE']:.2f}")
 
     def score_function(engine):
         """
