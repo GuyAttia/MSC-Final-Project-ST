@@ -2,8 +2,9 @@
 .devcontainer
 .idea
 data/
-notebooks/checkpoints/
 notebooks/tb-logger/
+notebooks/logs/
+notebooks/checkpoints/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
